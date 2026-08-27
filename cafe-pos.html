@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Mixologist POS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --ink:#1B1712;
+    --ink-soft:#2A241D;
+    --ink-softer:#352E24;
+    --paper:#F4EEDF;
+    --paper-line:#D9CDAF;
+    --copper:#B8703A;
+    --copper-deep:#8F5427;
+    --brass:#D9B36C;
+    --sage:#6E8B63;
+    --sage-deep:#54704B;
+    --rust:#A6412C;
+    --text-on-ink:#F4EEDF;
+    --text-muted:#A99C86;
+    --radius:10px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--text-on-ink);
+    font-family:'Inter',system-ui,sans-serif;
+    min-height:100vh;
+  }
+  button{font-family:inherit;}
+  button:focus-visible, input:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:2px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  #app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:20px 16px 60px;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+  }
+  .brand{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+  }
+  .brand h1{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:0.2px;
+    margin:0;
+  }
+  .brand span.tag{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    color:var(--text-muted);
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    border:1px solid var(--paper-line);
+    border-radius:20px;
+    padding:3px 10px;
+  }
+  .header-actions{display:flex; gap:8px;}
+  .ghost-btn{
+    background:transparent;
+    border:1px solid var(--ink-softer);
+    color:var(--text-muted);
+    border-radius:8px;
+    padding:9px 14px;
+    font-size:13px;
+    cursor:pointer;
+    transition:border-color .15s, color .15s;
+  }
+  .ghost-btn:hover{border-color:var(--brass); color:var(--brass);}
+
+  /* ---------- Layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr 340px;
+    gap:20px;
+    align-items:start;
+  }
+  @media (max-width: 880px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  /* ---------- Menu side ---------- */
+  .tabs{
+    display:flex;
+    gap:6px;
+    margin-bottom:14px;
+    flex-wrap:wrap;
+  }
+  .tab-btn{
+    background:var(--ink-soft);
+    border:1px solid var(--ink-softer);
+    color:var(--text-muted);
+    padding:8px 14px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    transition:all .15s;
+  }
+  .tab-btn.active{
+    background:var(--copper);
+    border-color:var(--copper);
+    color:#fff;
+  }
+  .tab-btn:hover:not(.active){border-color:var(--copper);}
+
+  .menu-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(148px, 1fr));
+    gap:10px;
+  }
+  .item-card{
+    position:relative;
+    background:var(--ink-soft);
+    border:1px solid var(--ink-softer);
+    border-radius:var(--radius);
+    padding:14px 12px;
+    text-align:left;
+    cursor:pointer;
+    color:var(--text-on-ink);
+    transition:transform .1s, border-color .15s, background .15s;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    min-height:88px;
+  }
+  .item-card:hover{border-color:var(--copper); background:var(--ink-softer);}
+  .item-card:active{transform:scale(0.97);}
+  .item-card.edit-mode{border-color:var(--rust); cursor:default;}
+  .delete-item-btn{
+    position:absolute;
+    top:6px; right:6px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:var(--rust);
+    color:#fff;
+    border:none;
+    font-size:12px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .delete-item-btn:hover{background:#c94f36;}
+  .item-name{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    line-height:1.25;
+  }
+  .item-price{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    color:var(--brass);
+  }
+
+  .custom-item-form{
+    margin-top:14px;
+    background:var(--ink-soft);
+    border:1px dashed var(--ink-softer);
+    border-radius:var(--radius);
+    padding:12px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .custom-item-form input{
+    background:var(--ink);
+    border:1px solid var(--ink-softer);
+    color:var(--text-on-ink);
+    border-radius:6px;
+    padding:8px 10px;
+    font-size:13px;
+    font-family:'Inter',sans-serif;
+  }
+  .custom-item-form input[name="cname"]{flex:1; min-width:120px;}
+  .custom-item-form input[name="cprice"]{width:90px;}
+  .add-custom-btn{
+    background:var(--sage);
+    border:none;
+    color:#fff;
+    padding:9px 14px;
+    border-radius:6px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  .add-custom-btn:hover{background:var(--sage-deep);}
+  .open-custom-btn{
+    margin-top:14px;
+    background:none;
+    border:1px dashed var(--ink-softer);
+    color:var(--text-muted);
+    padding:10px;
+    width:100%;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-size:13px;
+  }
+  .open-custom-btn:hover{color:var(--brass); border-color:var(--brass);}
+
+  /* ---------- Receipt / Cart ---------- */
+  .receipt-wrap{position:sticky; top:16px;}
+  .zigzag{
+    height:12px;
+    background:
+      linear-gradient(-45deg, var(--paper) 8px, transparent 0),
+      linear-gradient(45deg, var(--paper) 8px, transparent 0);
+    background-size:16px 16px;
+    background-repeat:repeat-x;
+  }
+  .zigzag.top{background-position:left top;}
+  .zigzag.bottom{background-position:left bottom; transform:rotate(180deg);}
+
+  .receipt{
+    background:var(--paper);
+    color:var(--ink);
+    padding:18px 18px 6px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .receipt-head{
+    text-align:center;
+    margin-bottom:10px;
+  }
+  .receipt-head .store{
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0.5px;
+  }
+  .receipt-head .meta{
+    font-size:10.5px;
+    color:#6b6252;
+    margin-top:2px;
+  }
+  .dashed{
+    border:none;
+    border-top:1px dashed var(--paper-line);
+    margin:10px 0;
+  }
+  .empty-note{
+    text-align:center;
+    color:#8a8065;
+    font-size:12.5px;
+    padding:18px 0 22px;
+  }
+  .cart-line{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12.5px;
+    padding:5px 0;
+  }
+  .cart-line .qty-ctrl{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    border:1px solid var(--paper-line);
+    border-radius:5px;
+    padding:1px 4px;
+  }
+  .qty-ctrl button{
+    background:none;
+    border:none;
+    color:var(--copper-deep);
+    font-size:13px;
+    width:16px;
+    cursor:pointer;
+    font-weight:700;
+  }
+  .cart-line .name{flex:1; min-width:0; overflow-wrap:anywhere;}
+  .cart-line .lineprice{width:64px; text-align:right;}
+  .remove-x{
+    background:none; border:none; color:#b4a98d; cursor:pointer; font-size:13px; padding:0 2px;
+  }
+  .remove-x:hover{color:var(--rust);}
+
+  .delivery-block{
+    padding:8px 0 2px;
+  }
+  .delivery-toggle{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    font-size:12.5px;
+    cursor:pointer;
+    color:#4a4433;
+  }
+  .delivery-toggle input{
+    width:14px; height:14px; accent-color:var(--copper);
+  }
+  #deliveryAmt{
+    width:100%;
+    margin-top:6px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    padding:7px 8px;
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+  }
+
+  .totals-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:12.5px;
+    padding:3px 0;
+  }
+  .totals-row.grand{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:17px;
+    font-weight:700;
+    padding-top:8px;
+  }
+
+  .pay-section{padding:12px 0 16px;}
+  .pay-buttons{display:flex; gap:8px; margin-top:8px;}
+  .pay-btn{
+    flex:1;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:7px;
+    padding:11px 8px;
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    font-family:'Inter',sans-serif;
+    transition:background .15s;
+  }
+  .pay-btn:hover{background:var(--copper-deep);}
+  .pay-btn:disabled{opacity:0.35; cursor:not-allowed;}
+
+  .cash-panel{
+    margin-top:10px;
+    background:#fff8ea;
+    border:1px solid var(--paper-line);
+    border-radius:8px;
+    padding:10px;
+  }
+  .cash-panel label{font-size:11px; color:#6b6252; display:block; margin-bottom:4px;}
+  .cash-panel input{
+    width:100%;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:15px;
+    padding:8px;
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .change-line{
+    display:flex; justify-content:space-between;
+    font-size:13px; margin-top:8px; font-weight:600;
+  }
+  .confirm-btn{
+    width:100%;
+    margin-top:10px;
+    background:var(--sage);
+    color:#fff;
+    border:none;
+    border-radius:7px;
+    padding:11px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .confirm-btn:hover{background:var(--sage-deep);}
+  .confirm-btn:disabled{opacity:0.4; cursor:not-allowed;}
+
+  .void-btn{
+    width:100%;
+    background:none;
+    border:1px dashed #c7bb99;
+    color:#8a5a45;
+    border-radius:7px;
+    padding:8px;
+    font-size:12px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .void-btn:hover{color:var(--rust); border-color:var(--rust);}
+
+  /* success flash */
+  .receipt.printed{animation:printFlash .6s ease;}
+  @keyframes printFlash{
+    0%{box-shadow:0 0 0 0 rgba(217,179,108,0.6);}
+    100%{box-shadow:0 0 0 14px rgba(217,179,108,0);}
+  }
+
+  /* ---------- History modal ---------- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    display:flex; align-items:flex-start; justify-content:center;
+    padding:40px 16px; z-index:50; overflow-y:auto;
+  }
+  .modal{
+    background:var(--paper); color:var(--ink);
+    width:100%; max-width:520px;
+    border-radius:12px;
+    padding:20px;
+    font-family:'IBM Plex Mono',monospace;
+  }
+  .modal h2{
+    font-family:'Space Grotesk',sans-serif;
+    font-size:19px; margin:0 0 4px;
+  }
+  .modal .sub{font-size:12px; color:#6b6252; margin-bottom:14px;}
+  .summary-grid{
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:10px; margin-bottom:16px;
+  }
+  .summary-card{
+    background:#fff8ea; border:1px solid var(--paper-line);
+    border-radius:8px; padding:10px 12px;
+  }
+  .summary-card .label{font-size:10.5px; color:#8a8065; text-transform:uppercase; letter-spacing:0.5px;}
+  .summary-card .value{font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:700; margin-top:2px;}
+  .order-row{
+    display:flex; justify-content:space-between;
+    font-size:12px; padding:7px 0; border-top:1px dashed var(--paper-line);
+  }
+  .close-modal{
+    width:100%; margin-top:14px;
+    background:var(--ink); color:var(--paper);
+    border:none; border-radius:7px; padding:10px;
+    cursor:pointer; font-family:'Inter',sans-serif; font-weight:600;
+  }
+  .empty-hist{text-align:center; color:#8a8065; font-size:12.5px; padding:16px 0;}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <h1>The Mixologist</h1>
+      <span class="tag">Register</span>
+    </div>
+    <div class="header-actions">
+      <button class="ghost-btn" id="historyBtn">Today's sales</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="tabs" id="tabs"></div>
+      <div class="menu-grid" id="menuGrid"></div>
+      <div style="display:flex; gap:8px; margin-top:14px;">
+        <button class="open-custom-btn" id="openCustomBtn" style="margin-top:0;">+ Add custom item</button>
+        <button class="open-custom-btn" id="editMenuBtn" style="margin-top:0;">Delete items</button>
+      </div>
+      <div class="custom-item-form" id="customForm" style="display:none;">
+        <input type="text" name="cname" placeholder="Item name" />
+        <input type="number" name="cprice" placeholder="₱0.00" min="0" step="0.01" />
+        <button class="add-custom-btn" id="addCustomBtn">Add</button>
+      </div>
+    </div>
+
+    <div class="receipt-wrap">
+      <div class="zigzag top"></div>
+      <div class="receipt" id="receipt">
+        <div class="receipt-head">
+          <div class="store">THE MIXOLOGIST</div>
+          <div class="meta" id="orderMeta">Order #0001</div>
+        </div>
+        <hr class="dashed" />
+        <div id="cartLines"><div class="empty-note">No items yet — tap the menu to start an order.</div></div>
+        <div class="delivery-block" id="deliveryBlock" style="display:none;">
+          <label class="delivery-toggle">
+            <input type="checkbox" id="deliveryToggle" />
+            <span>Delivery fee</span>
+          </label>
+          <input type="number" id="deliveryAmt" min="0" step="0.01" placeholder="0.00" style="display:none;" />
+        </div>
+        <hr class="dashed" id="totalsRule" style="display:none;" />
+        <div id="totalsBlock"></div>
+        <div class="pay-section" id="paySection" style="display:none;">
+          <div class="pay-buttons">
+            <button class="pay-btn" id="cashBtn">Cash</button>
+            <button class="pay-btn" id="cardBtn">Card</button>
+          </div>
+          <div class="cash-panel" id="cashPanel" style="display:none;">
+            <label for="tendered">Cash received</label>
+            <input type="number" id="tendered" min="0" step="0.01" placeholder="0.00" />
+            <div class="change-line"><span>Change</span><span id="changeAmt">₱0.00</span></div>
+          </div>
+          <button class="confirm-btn" id="confirmBtn" disabled>Complete order</button>
+          <button class="void-btn" id="voidBtn">Void order</button>
+        </div>
+      </div>
+      <div class="zigzag bottom"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const DEFAULT_MENU = [
+    {id:'kbarako', name:'Kapeng Barako', category:'Coffee', price:95},
+    {id:'americano', name:'Americano', category:'Coffee', price:95},
+    {id:'spanishlatte', name:'Spanish Latte', category:'Coffee', price:125},
+    {id:'cappuccino', name:'Cappuccino', category:'Coffee', price:115},
+    {id:'caramelmac', name:'Caramel Macchiato', category:'Coffee', price:135},
+    {id:'coldbrew', name:'Cold Brew', category:'Coffee', price:120},
+    {id:'gingertea', name:'Ginger Tea', category:'Tea', price:85},
+    {id:'matcha', name:'Matcha Latte', category:'Tea', price:130},
+    {id:'milktea', name:'Iced Milk Tea', category:'Tea', price:110},
+    {id:'ensaymada', name:'Ensaymada', category:'Pastries', price:65},
+    {id:'pandecoco', name:'Pan de Coco', category:'Pastries', price:45},
+    {id:'muffin', name:'Banana Muffin', category:'Pastries', price:70},
+    {id:'cheeseroll', name:'Cheese Roll', category:'Pastries', price:55},
+    {id:'icedchoco', name:'Iced Choco', category:'Cold & Others', price:110},
+    {id:'fruitshake', name:'Fruit Shake', category:'Cold & Others', price:120},
+    {id:'water', name:'Bottled Water', category:'Cold & Others', price:30},
+  ];
+  const MENU_KEY = 'cafepos:menu';
+  const STATE_KEY = 'cafepos:state';
+
+  let menu = DEFAULT_MENU.slice();
+  let categories = [];
+  let activeCategory = 'All';
+  let cart = []; // {id,name,price,qty}
+  let orderCounter = 1;
+  let orders = [];
+  let paymentMethod = null;
+  let deliveryEnabled = false;
+  let deliveryFee = 0;
+  let editMode = false;
+
+  const $ = (sel) => document.querySelector(sel);
+  const fmt = (n) => '₱' + n.toFixed(2);
+
+  function loadPersisted(){
+    try{
+      const m = localStorage.getItem(MENU_KEY);
+      if(m) menu = JSON.parse(m);
+    }catch(e){ /* not found or failed, use default */ }
+    try{
+      const s = localStorage.getItem(STATE_KEY);
+      if(s){
+        const parsed = JSON.parse(s);
+        orderCounter = parsed.counter || 1;
+        orders = parsed.orders || [];
+      }
+    }catch(e){ /* not found or failed, use defaults */ }
+    rebuildCategories();
+    renderTabs();
+    renderMenu();
+    updateOrderMeta();
+  }
+
+  function saveMenu(){
+    try{ localStorage.setItem(MENU_KEY, JSON.stringify(menu)); }
+    catch(e){ console.error('menu save failed', e); }
+  }
+  function saveState(){
+    try{
+      const trimmed = orders.slice(-150);
+      localStorage.setItem(STATE_KEY, JSON.stringify({counter: orderCounter, orders: trimmed}));
+    }catch(e){ console.error('state save failed', e); }
+  }
+
+  function rebuildCategories(){
+    const set = new Set(menu.map(i => i.category));
+    categories = ['All', ...Array.from(set)];
+    if(!categories.includes(activeCategory)) activeCategory = 'All';
+  }
+
+  function renderTabs(){
+    const wrap = $('#tabs');
+    wrap.innerHTML = '';
+    categories.forEach(cat => {
+      const b = document.createElement('button');
+      b.className = 'tab-btn' + (cat === activeCategory ? ' active' : '');
+      b.textContent = cat;
+      b.onclick = () => { activeCategory = cat; renderTabs(); renderMenu(); };
+      wrap.appendChild(b);
+    });
+  }
+
+  function renderMenu(){
+    const grid = $('#menuGrid');
+    grid.innerHTML = '';
+    const items = (activeCategory === 'All' ? menu : menu.filter(i => i.category === activeCategory))
+      .slice().sort((a,b) => a.name.localeCompare(b.name));
+    items.forEach(item => {
+      const card = document.createElement('button');
+      card.className = 'item-card' + (editMode ? ' edit-mode' : '');
+      card.innerHTML = `<div class="item-name">${escapeHtml(item.name)}</div><div class="item-price">${fmt(item.price)}</div>`;
+      if(editMode){
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-item-btn';
+        delBtn.textContent = '✕';
+        delBtn.setAttribute('aria-label', `Delete ${item.name}`);
+        delBtn.onclick = (e) => { e.stopPropagation(); deleteMenuItem(item.id); };
+        card.appendChild(delBtn);
+        card.onclick = (e) => e.preventDefault();
+      } else {
+        card.onclick = () => addToCart(item);
+      }
+      grid.appendChild(card);
+    });
+  }
+
+  async function deleteMenuItem(id){
+    menu = menu.filter(i => i.id !== id);
+    await saveMenu();
+    rebuildCategories();
+    renderTabs();
+    renderMenu();
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function addToCart(item){
+    const existing = cart.find(c => c.id === item.id);
+    if(existing){ existing.qty += 1; }
+    else{ cart.push({id:item.id, name:item.name, price:item.price, qty:1}); }
+    paymentMethod = null;
+    renderCart();
+  }
+
+  function changeQty(id, delta){
+    const line = cart.find(c => c.id === id);
+    if(!line) return;
+    line.qty += delta;
+    if(line.qty <= 0) cart = cart.filter(c => c.id !== id);
+    paymentMethod = null;
+    renderCart();
+  }
+
+  function removeLine(id){
+    cart = cart.filter(c => c.id !== id);
+    paymentMethod = null;
+    renderCart();
+  }
+
+  function calcTotals(){
+    const subtotal = cart.reduce((sum,c) => sum + c.price * c.qty, 0);
+    const fee = deliveryEnabled ? (deliveryFee || 0) : 0;
+    const total = subtotal + fee;
+    return {subtotal, fee, total};
+  }
+
+  function updateOrderMeta(){
+    const num = String(orderCounter).padStart(4,'0');
+    const now = new Date();
+    $('#orderMeta').textContent = `Order #${num} · ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+  }
+
+  function renderCart(){
+    updateOrderMeta();
+    const linesWrap = $('#cartLines');
+    const totalsRule = $('#totalsRule');
+    const totalsBlock = $('#totalsBlock');
+    const paySection = $('#paySection');
+    const deliveryBlock = $('#deliveryBlock');
+
+    if(cart.length === 0){
+      linesWrap.innerHTML = '<div class="empty-note">No items yet — tap the menu to start an order.</div>';
+      totalsRule.style.display = 'none';
+      totalsBlock.innerHTML = '';
+      paySection.style.display = 'none';
+      deliveryBlock.style.display = 'none';
+      return;
+    }
+    deliveryBlock.style.display = 'block';
+
+    linesWrap.innerHTML = '';
+    cart.forEach(line => {
+      const row = document.createElement('div');
+      row.className = 'cart-line';
+      row.innerHTML = `
+        <div class="qty-ctrl">
+          <button data-act="dec" data-id="${line.id}">−</button>
+          <span>${line.qty}</span>
+          <button data-act="inc" data-id="${line.id}">+</button>
+        </div>
+        <div class="name">${escapeHtml(line.name)}</div>
+        <div class="lineprice">${fmt(line.price * line.qty)}</div>
+        <button class="remove-x" data-act="rm" data-id="${line.id}">✕</button>
+      `;
+      linesWrap.appendChild(row);
+    });
+    linesWrap.querySelectorAll('button').forEach(btn => {
+      btn.onclick = () => {
+        const id = btn.getAttribute('data-id');
+        const act = btn.getAttribute('data-act');
+        if(act === 'inc') changeQty(id, 1);
+        else if(act === 'dec') changeQty(id, -1);
+        else if(act === 'rm') removeLine(id);
+      };
+    });
+
+    const {subtotal, fee, total} = calcTotals();
+    totalsRule.style.display = 'block';
+    totalsBlock.innerHTML = `
+      <div class="totals-row"><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+      ${deliveryEnabled ? `<div class="totals-row"><span>Delivery fee</span><span>${fmt(fee)}</span></div>` : ''}
+      <div class="totals-row grand"><span>Total</span><span>${fmt(total)}</span></div>
+    `;
+    paySection.style.display = 'block';
+    $('#cashPanel').style.display = paymentMethod === 'cash' ? 'block' : 'none';
+    $('#confirmBtn').disabled = !paymentMethod || (paymentMethod === 'cash' && !cashIsSufficient());
+    if(paymentMethod === 'cash') updateChange();
+  }
+
+  function cashIsSufficient(){
+    const {total} = calcTotals();
+    const tendered = parseFloat($('#tendered').value) || 0;
+    return tendered >= total;
+  }
+
+  function updateChange(){
+    const {total} = calcTotals();
+    const tendered = parseFloat($('#tendered').value) || 0;
+    const change = Math.max(0, tendered - total);
+    $('#changeAmt').textContent = fmt(change);
+    $('#confirmBtn').disabled = tendered < total;
+  }
+
+  async function completeOrder(){
+    const {subtotal, fee, total} = calcTotals();
+    const tendered = paymentMethod === 'cash' ? (parseFloat($('#tendered').value) || 0) : total;
+    const change = paymentMethod === 'cash' ? Math.max(0, tendered - total) : 0;
+    const order = {
+      id: orderCounter,
+      items: cart.map(c => ({name:c.name, qty:c.qty, price:c.price})),
+      subtotal, deliveryFee: fee, total,
+      payment: paymentMethod,
+      tendered: paymentMethod === 'cash' ? tendered : null,
+      change: paymentMethod === 'cash' ? change : null,
+      timestamp: new Date().toISOString(),
+    };
+    orders.push(order);
+    orderCounter += 1;
+    await saveState();
+
+    const receiptEl = $('#receipt');
+    receiptEl.classList.add('printed');
+    setTimeout(() => receiptEl.classList.remove('printed'), 650);
+
+    cart = [];
+    paymentMethod = null;
+    deliveryEnabled = false;
+    deliveryFee = 0;
+    resetDeliveryControls();
+    renderCart();
+  }
+
+  function voidOrder(){
+    cart = [];
+    paymentMethod = null;
+    deliveryEnabled = false;
+    deliveryFee = 0;
+    resetDeliveryControls();
+    renderCart();
+  }
+
+  function resetDeliveryControls(){
+    $('#deliveryToggle').checked = false;
+    $('#deliveryAmt').value = '';
+    $('#deliveryAmt').style.display = 'none';
+  }
+
+  function showHistory(){
+    const todayStr = new Date().toDateString();
+    const todays = orders.filter(o => new Date(o.timestamp).toDateString() === todayStr);
+    const revenue = todays.reduce((s,o) => s + o.total, 0);
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    const listHtml = todays.length === 0
+      ? '<div class="empty-hist">No orders rung up yet today.</div>'
+      : todays.slice().reverse().map(o => {
+          const time = new Date(o.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          return `<div class="order-row"><span>#${String(o.id).padStart(4,'0')} · ${time} · ${escapeHtml(o.payment)}</span><span>${fmt(o.total)}</span></div>`;
+        }).join('');
+
+    backdrop.innerHTML = `
+      <div class="modal">
+        <h2>Today's sales</h2>
+        <div class="sub">${new Date().toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric'})}</div>
+        <div class="summary-grid">
+          <div class="summary-card"><div class="label">Orders</div><div class="value">${todays.length}</div></div>
+          <div class="summary-card"><div class="label">Revenue</div><div class="value">${fmt(revenue)}</div></div>
+        </div>
+        ${listHtml}
+        <button class="close-modal">Close</button>
+      </div>
+    `;
+    backdrop.querySelector('.close-modal').onclick = () => backdrop.remove();
+    backdrop.onclick = (e) => { if(e.target === backdrop) backdrop.remove(); };
+    document.body.appendChild(backdrop);
+  }
+
+  // wire up static controls
+  $('#openCustomBtn').onclick = () => {
+    const form = $('#customForm');
+    form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+  };
+  $('#editMenuBtn').onclick = () => {
+    editMode = !editMode;
+    $('#editMenuBtn').textContent = editMode ? 'Done' : 'Delete items';
+    $('#editMenuBtn').style.borderColor = editMode ? 'var(--rust)' : '';
+    $('#editMenuBtn').style.color = editMode ? 'var(--rust)' : '';
+    renderMenu();
+  };
+  $('#addCustomBtn').onclick = async () => {
+    const nameInput = document.querySelector('input[name="cname"]');
+    const priceInput = document.querySelector('input[name="cprice"]');
+    const name = nameInput.value.trim();
+    const price = parseFloat(priceInput.value);
+    if(!name || isNaN(price) || price < 0) return;
+    const id = 'custom-' + Date.now();
+    menu.push({id, name, category:'Custom', price});
+    nameInput.value = ''; priceInput.value = '';
+    await saveMenu();
+    rebuildCategories();
+    renderTabs();
+    renderMenu();
+  };
+
+  $('#deliveryToggle').addEventListener('change', (e) => {
+    deliveryEnabled = e.target.checked;
+    $('#deliveryAmt').style.display = deliveryEnabled ? 'block' : 'none';
+    if(deliveryEnabled) $('#deliveryAmt').focus();
+    paymentMethod = null;
+    renderCart();
+  });
+  $('#deliveryAmt').addEventListener('input', (e) => {
+    deliveryFee = parseFloat(e.target.value) || 0;
+    paymentMethod = null;
+    renderCart();
+  });
+
+  $('#cashBtn').onclick = () => { paymentMethod = 'cash'; renderCart(); };
+  $('#cardBtn').onclick = () => { paymentMethod = 'card'; renderCart(); };
+  $('#tendered').addEventListener('input', updateChange);
+  $('#confirmBtn').onclick = completeOrder;
+  $('#voidBtn').onclick = voidOrder;
+  $('#historyBtn').onclick = showHistory;
+
+  loadPersisted();
+})();
+</script>
+</body>
+</html>
