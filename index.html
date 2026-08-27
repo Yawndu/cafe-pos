@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Mixologist POS</title>
+<title>Kape Kanto — Register</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
@@ -406,6 +406,34 @@
   }
   .void-btn:hover{color:var(--rust); border-color:var(--rust);}
 
+  .completed-section{padding:6px 0 16px; text-align:center;}
+  .paid-stamp{
+    display:inline-block;
+    font-family:'Space Grotesk',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:3px;
+    color:var(--sage-deep);
+    border:2px solid var(--sage-deep);
+    border-radius:6px;
+    padding:4px 14px;
+    transform:rotate(-4deg);
+    margin-bottom:14px;
+  }
+  #completedSection .confirm-btn{background:var(--copper); margin-bottom:8px;}
+  #completedSection .confirm-btn:hover{background:var(--copper-deep);}
+
+  @media print{
+    body *{visibility:hidden;}
+    .receipt, .receipt *{visibility:visible;}
+    .receipt{
+      position:absolute; top:0; left:0; width:320px;
+      box-shadow:none;
+    }
+    .zigzag{display:none;}
+    #paySection, #printBtn, #newOrderBtn, .paid-stamp{display:none !important;}
+  }
+
   /* success flash */
   .receipt.printed{animation:printFlash .6s ease;}
   @keyframes printFlash{
@@ -458,7 +486,7 @@
 <div id="app">
   <header>
     <div class="brand">
-      <h1>The Mixologist</h1>
+      <h1>Kape Kanto</h1>
       <span class="tag">Register</span>
     </div>
     <div class="header-actions">
@@ -485,7 +513,7 @@
       <div class="zigzag top"></div>
       <div class="receipt" id="receipt">
         <div class="receipt-head">
-          <div class="store">THE MIXOLOGIST</div>
+          <div class="store">KAPE KANTO</div>
           <div class="meta" id="orderMeta">Order #0001</div>
         </div>
         <hr class="dashed" />
@@ -511,6 +539,11 @@
           </div>
           <button class="confirm-btn" id="confirmBtn" disabled>Complete order</button>
           <button class="void-btn" id="voidBtn">Void order</button>
+        </div>
+        <div class="completed-section" id="completedSection" style="display:none;">
+          <div class="paid-stamp">PAID</div>
+          <button class="confirm-btn" id="printBtn">Print receipt</button>
+          <button class="void-btn" id="newOrderBtn" style="border-style:solid;">Start new order</button>
         </div>
       </div>
       <div class="zigzag bottom"></div>
@@ -551,6 +584,7 @@
   let deliveryEnabled = false;
   let deliveryFee = 0;
   let editMode = false;
+  let completedOrder = null;
 
   const $ = (sel) => document.querySelector(sel);
   const fmt = (n) => '₱' + n.toFixed(2);
@@ -669,19 +703,52 @@
     return {subtotal, fee, total};
   }
 
+  function renderOrderMeta(num, date){
+    const numStr = String(num).padStart(4,'0');
+    $('#orderMeta').textContent = `Order #${numStr} · ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+  }
   function updateOrderMeta(){
-    const num = String(orderCounter).padStart(4,'0');
-    const now = new Date();
-    $('#orderMeta').textContent = `Order #${num} · ${now.toLocaleDateString()} ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+    renderOrderMeta(orderCounter, new Date());
   }
 
   function renderCart(){
-    updateOrderMeta();
     const linesWrap = $('#cartLines');
     const totalsRule = $('#totalsRule');
     const totalsBlock = $('#totalsBlock');
     const paySection = $('#paySection');
     const deliveryBlock = $('#deliveryBlock');
+    const completedSection = $('#completedSection');
+
+    if(completedOrder){
+      renderOrderMeta(completedOrder.id, new Date(completedOrder.timestamp));
+      linesWrap.innerHTML = '';
+      completedOrder.items.forEach(line => {
+        const row = document.createElement('div');
+        row.className = 'cart-line';
+        row.innerHTML = `
+          <div class="name">${line.qty}x ${escapeHtml(line.name)}</div>
+          <div class="lineprice">${fmt(line.price * line.qty)}</div>
+        `;
+        linesWrap.appendChild(row);
+      });
+      deliveryBlock.style.display = 'none';
+      totalsRule.style.display = 'block';
+      totalsBlock.innerHTML = `
+        <div class="totals-row"><span>Subtotal</span><span>${fmt(completedOrder.subtotal)}</span></div>
+        ${completedOrder.deliveryFee ? `<div class="totals-row"><span>Delivery fee</span><span>${fmt(completedOrder.deliveryFee)}</span></div>` : ''}
+        <div class="totals-row grand"><span>Total</span><span>${fmt(completedOrder.total)}</span></div>
+        <div class="totals-row"><span>Paid via</span><span>${escapeHtml(completedOrder.payment)}</span></div>
+        ${completedOrder.payment === 'cash' ? `
+          <div class="totals-row"><span>Cash received</span><span>${fmt(completedOrder.tendered)}</span></div>
+          <div class="totals-row"><span>Change</span><span>${fmt(completedOrder.change)}</span></div>
+        ` : ''}
+      `;
+      paySection.style.display = 'none';
+      completedSection.style.display = 'block';
+      return;
+    }
+    completedSection.style.display = 'none';
+    updateOrderMeta();
 
     if(cart.length === 0){
       linesWrap.innerHTML = '<div class="empty-note">No items yet — tap the menu to start an order.</div>';
@@ -767,6 +834,12 @@
     receiptEl.classList.add('printed');
     setTimeout(() => receiptEl.classList.remove('printed'), 650);
 
+    completedOrder = order;
+    renderCart();
+  }
+
+  function newOrder(){
+    completedOrder = null;
     cart = [];
     paymentMethod = null;
     deliveryEnabled = false;
@@ -866,6 +939,8 @@
   $('#tendered').addEventListener('input', updateChange);
   $('#confirmBtn').onclick = completeOrder;
   $('#voidBtn').onclick = voidOrder;
+  $('#printBtn').onclick = () => window.print();
+  $('#newOrderBtn').onclick = newOrder;
   $('#historyBtn').onclick = showHistory;
 
   loadPersisted();
